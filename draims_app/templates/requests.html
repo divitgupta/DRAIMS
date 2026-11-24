@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, bar, csrf, icon, urgency %}
+{% block title %}Requests{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Operations</div>
+    <h1 class="page-title">Relief requests</h1>
+    <p class="page-sub">Every request with its priority score and how much of it has been allocated so far.</p>
+  </div>
+  {% if has_role('COORDINATOR', 'FIELD_OFFICER') %}
+  <div class="page-actions"><a class="btn btn-primary" href="{{ url_for('new_request') }}">{{ icon('plus') }}New request</a></div>
+  {% endif %}
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <nav class="tabs" aria-label="Filter by status">
+      <a class="tab{% if not status %} active{% endif %}" href="{{ url_for('requests_list', q=q or None) }}">All <span class="n">{{ tabs.values()|sum }}</span></a>
+      {% for s in statuses %}
+      <a class="tab{% if s == status %} active{% endif %}" href="{{ url_for('requests_list', status=s, q=q or None) }}"
+         {% if s == status %}aria-current="true"{% endif %}>{{ s|capitalize }} <span class="n">{{ tabs.get(s, 0) }}</span></a>
+      {% endfor %}
+    </nav>
+    <form method="get" class="d-flex gap-2 align-items-center" role="search">
+      {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+      <div class="search">{{ icon('search') }}
+        <input class="form-control" name="q" maxlength="80" placeholder="Search zone or disaster" value="{{ q }}" aria-label="Search"></div>
+      <button class="btn btn-sm btn-ghost" type="submit">Search</button>
+    </form>
+  </div>
+  <div class="table-wrap"><table class="table table-hover align-middle">
+    <thead><tr><th>Req</th><th>Zone</th><th>Urgency</th><th>Priority</th><th>Covered</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td class="id">#{{ r.request_id }}</td>
+        <td><span class="strong">{{ r.zone_name }}</span><span class="sub">{{ r.disaster_name }}</span></td>
+        <td>{{ urgency(r.urgency) }}</td>
+        <td><span class="score"><span class="num">{{ r.priority_score }}</span>{{ bar(r.priority_score, 100, 'blue') }}</span></td>
+        <td><span class="meter">{{ bar(r.fulfilment_pct, 100, 'green' if r.fulfilment_pct >= 100 else 'amber') }}
+          <span class="num">{{ r.allocated|num }} <span class="unit">of {{ r.requested|num }}</span></span></span></td>
+        <td>{{ badge(r.status) }}</td>
+        <td class="text-end">{% if has_role('COORDINATOR') and r.status in ('PENDING', 'PARTIAL', 'ALLOCATED') %}
+          <form method="post" action="{{ url_for('cancel_request', request_id=r.request_id) }}"
+                data-confirm="Cancel request {{ r.request_id }}? Stock that has not left the warehouse will be returned.">
+            {{ csrf() }}<button class="btn btn-sm btn-danger-soft" type="submit">Cancel</button></form>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="7" class="empty">No requests match.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <div class="panel-foot"><span class="hint">{{ rows|length }} request{{ 's' if rows|length != 1 }} shown{% if q %} for &ldquo;{{ q }}&rdquo;{% endif %}.</span></div>
+</section>
+{% endblock %}

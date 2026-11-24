@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Created by the app at run time (never commit)
+draims_app/instance/
+draims_app/logs/
+
+# Editor and OS files
+.DS_Store
+.claude/
+
+# Duplicate copies of the synopsis
+Synopsis_DBMS_DRAIMS copy*.pages

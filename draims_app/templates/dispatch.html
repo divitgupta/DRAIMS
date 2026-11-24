@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, csrf, icon %}
+{% block title %}Dispatch & Delivery{% endblock %}
+{% block content %}
+{% set editable = 'ALLOCATED' if has_role('WAREHOUSE_MANAGER') else ('DISPATCHED' if has_role('FIELD_OFFICER') else '') %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Operations</div>
+    <h1 class="page-title">Dispatch &amp; delivery</h1>
+    <p class="page-sub">
+      {% if has_role('WAREHOUSE_MANAGER') %}Select allocated stock that has left the warehouse and mark it dispatched.
+      {% elif has_role('FIELD_OFFICER') %}Select dispatched stock that has reached the zone and confirm delivery.
+      {% else %}View only. Warehouse managers mark dispatch; field officers confirm delivery.{% endif %}</p>
+  </div>
+</div>
+
+<section class="panel pipeline mb-4" aria-label="Allocations at each stage. Status can only move forward.">
+  <div class="stage">{{ badge('ALLOCATED') }}<div class="stage-n">{{ stages.get('ALLOCATED', 0) }}</div><div class="stage-sub">Reserved, waiting at the warehouse</div></div>
+  <div class="stage">{{ badge('DISPATCHED') }}<div class="stage-n">{{ stages.get('DISPATCHED', 0) }}</div><div class="stage-sub">On the way to the zone</div></div>
+  <div class="stage">{{ badge('DELIVERED') }}<div class="stage-n">{{ stages.get('DELIVERED', 0) }}</div><div class="stage-sub">Confirmed by a field officer</div></div>
+</section>
+
+<form method="post">
+  {{ csrf() }}
+  <section class="panel">
+    <div class="panel-head"><div><h2 class="panel-title">{{ icon('truck') }}Stock on the move</h2>
+      <p class="panel-sub">Allocations that are not delivered yet.</p></div><span class="count">{{ rows|length }}</span></div>
+    <div class="table-wrap"><table class="table table-hover align-middle">
+      <thead><tr><th class="w-btn">{% if editable %}<input class="form-check-input" type="checkbox" id="select-all" aria-label="Select all">{% endif %}</th>
+        <th>Alloc</th><th>Req</th><th>Zone</th><th>Item</th><th>From warehouse</th><th class="text-end">Quantity</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for a in rows %}
+        <tr><td>{% if a.status == editable %}<input class="form-check-input row-check" type="checkbox" name="allocation_id"
+                   value="{{ a.allocation_id }}" aria-label="Select allocation {{ a.allocation_id }}">{% endif %}</td>
+          <td class="id">{{ a.allocation_id }}</td><td class="id">#{{ a.request_id }}</td><td class="strong">{{ a.zone_name }}</td>
+          <td>{{ a.item_name }}</td><td>{{ a.warehouse_name }}</td>
+          <td class="text-end num">{{ a.quantity|num }} <span class="unit">{{ a.unit }}</span></td><td>{{ badge(a.status) }}</td></tr>
+      {% else %}<tr><td colspan="8" class="empty">Nothing waiting for dispatch or delivery.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+    {% if editable %}
+    <div class="panel-foot">
+      <button class="btn btn-primary" type="submit">{{ icon('check') }}{{ 'Mark dispatched' if editable == 'ALLOCATED' else 'Confirm delivery' }}</button>
+      <span class="hint" id="sel-count">Tick the rows to update.</span>
+    </div>
+    {% endif %}
+  </section>
+</form>
+{% endblock %}

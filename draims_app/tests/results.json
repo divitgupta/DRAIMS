@@ -1,0 +1,182 @@
+[
+ {
+  "id": "S01",
+  "test": "Valid login for each of the four roles opens the dashboard",
+  "outcome": "passed"
+ },
+ {
+  "id": "S02",
+  "test": "Wrong password gives a generic error and no session",
+  "outcome": "passed"
+ },
+ {
+  "id": "S03",
+  "test": "Unknown username gives the same generic error (no hint that the user does not exist)",
+  "outcome": "passed"
+ },
+ {
+  "id": "S04",
+  "test": "Five failed logins lock the account for 10 minutes, even for the right password",
+  "outcome": "passed"
+ },
+ {
+  "id": "S05",
+  "test": "Pages need a login; the user is sent to the login page",
+  "outcome": "passed"
+ },
+ {
+  "id": "S06",
+  "test": "Roles are enforced on the server: field officer cannot open allocation, warehouse manager cannot run it",
+  "outcome": "passed"
+ },
+ {
+  "id": "S07",
+  "test": "A POST without the CSRF token, or with a wrong one, is rejected with 400",
+  "outcome": "passed"
+ },
+ {
+  "id": "S08",
+  "test": "SQL injection in the login form does not log anyone in",
+  "outcome": "passed"
+ },
+ {
+  "id": "S09",
+  "test": "SQL injection in the request search box is treated as plain text",
+  "outcome": "passed"
+ },
+ {
+  "id": "S10",
+  "test": "Script tags typed into a form are rejected by validation, and echoed text is HTML-escaped",
+  "outcome": "passed"
+ },
+ {
+  "id": "S11",
+  "test": "New users' passwords are stored only as salted PBKDF2-SHA256 hashes",
+  "outcome": "passed"
+ },
+ {
+  "id": "S12",
+  "test": "Weak passwords are rejected with the list of missing rules",
+  "outcome": "passed"
+ },
+ {
+  "id": "S13",
+  "test": "After 30 minutes without activity the session ends",
+  "outcome": "passed"
+ },
+ {
+  "id": "S14",
+  "test": "Every response carries CSP, anti-framing, no-sniff and no-cache headers",
+  "outcome": "passed"
+ },
+ {
+  "id": "S15",
+  "test": "The session cookie is HttpOnly and SameSite=Strict",
+  "outcome": "passed"
+ },
+ {
+  "id": "S16",
+  "test": "The ?next= parameter cannot send users to another site after login",
+  "outcome": "passed"
+ },
+ {
+  "id": "S17",
+  "test": "Logout needs a POST with the CSRF token and ends the session",
+  "outcome": "passed"
+ },
+ {
+  "id": "S18",
+  "test": "Logins, failed logins and denied pages are written to logs/security.log",
+  "outcome": "passed"
+ },
+ {
+  "id": "V01",
+  "test": "Disaster form: empty name and a future start date are rejected",
+  "outcome": "passed"
+ },
+ {
+  "id": "V02",
+  "test": "Zone form: damage level 7 and a negative population are rejected before reaching the database",
+  "outcome": "passed"
+ },
+ {
+  "id": "V03",
+  "test": "A duplicate zone is stopped by the UNIQUE constraint and shown as a friendly message",
+  "outcome": "passed"
+ },
+ {
+  "id": "V04",
+  "test": "Donor form: a phone number that is not 10 digits starting with 6-9 is rejected",
+  "outcome": "passed"
+ },
+ {
+  "id": "V05",
+  "test": "Donation form: quantity 0 and a future date are rejected",
+  "outcome": "passed"
+ },
+ {
+  "id": "V06",
+  "test": "A valid donation is saved, gets a receipt number and raises stock at once",
+  "outcome": "passed"
+ },
+ {
+  "id": "V07",
+  "test": "Relief request: a request without items is rejected",
+  "outcome": "passed"
+ },
+ {
+  "id": "V08",
+  "test": "Relief request: the same item twice is rejected",
+  "outcome": "passed"
+ },
+ {
+  "id": "V09",
+  "test": "Relief request: quantity outside 1-100,000 and urgency 9 are rejected",
+  "outcome": "passed"
+ },
+ {
+  "id": "V10",
+  "test": "Relief request: a zone of a closed disaster cannot be chosen",
+  "outcome": "passed"
+ },
+ {
+  "id": "V11",
+  "test": "A valid request with two items is saved as PENDING with both items",
+  "outcome": "passed"
+ },
+ {
+  "id": "V12",
+  "test": "User form: an existing username is stopped by the UNIQUE constraint",
+  "outcome": "passed"
+ },
+ {
+  "id": "V13",
+  "test": "Inventory form: a negative reorder level is rejected; a valid one is saved",
+  "outcome": "passed"
+ },
+ {
+  "id": "V14",
+  "test": "Disaster form: a 101-character name is rejected",
+  "outcome": "passed"
+ },
+ {
+  "id": "W01",
+  "test": "Coordinator runs allocation; open requests are served in priority order",
+  "outcome": "passed"
+ },
+ {
+  "id": "W02",
+  "test": "Warehouse manager marks stock dispatched; field officer confirms delivery",
+  "outcome": "passed"
+ },
+ {
+  "id": "W03",
+  "test": "Cancelling an allocated request returns its stock to the warehouse",
+  "outcome": "passed"
+ },
+ {
+  "id": "W04",
+  "test": "A request whose stock is already on the road cannot be cancelled",
+  "outcome": "passed"
+ }
+]

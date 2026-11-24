@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, bar, dtype_icon, icon, urgency %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{% set people = active|sum(attribute='people') %}
+{% set zones = active|sum(attribute='zones') %}
+{% set covered = (100 * demand.allocated / demand.requested)|round|int if demand.requested else 100 %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Situation overview</div>
+    <h1 class="page-title">Relief operations</h1>
+    <p class="page-sub">{% if active %}{{ active|length }} active disaster{{ 's' if active|length != 1 }} affecting
+      {{ people|num }} people across {{ zones }} zone{{ 's' if zones != 1 }}.{% else %}No disaster is active right now.{% endif %}
+      Signed in as {{ g.user.full_name }}, {{ ROLE_NAMES[g.user.role] }}.</p>
+  </div>
+  <div class="page-actions">
+    {% if has_role('COORDINATOR') %}<a class="btn btn-ghost" href="{{ url_for('allocation') }}">{{ icon('target') }}Allocation</a>{% endif %}
+    {% if has_role('COORDINATOR', 'FIELD_OFFICER') %}<a class="btn btn-primary" href="{{ url_for('new_request') }}">{{ icon('plus') }}New request</a>{% endif %}
+    {% if has_role('ADMIN', 'WAREHOUSE_MANAGER') %}<a class="btn btn-primary" href="{{ url_for('donations') }}">{{ icon('heart') }}Record donation</a>{% endif %}
+  </div>
+</div>
+
+<section class="panel kpis mb-4" aria-label="Key figures">
+  <div class="kpi">
+    <div class="kpi-label"><i class="red"></i>Active disasters</div>
+    <div class="kpi-value">{{ counts.disasters }}</div>
+    <div class="kpi-sub">{{ people|num }} people affected</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label"><i class="amber"></i>Open requests</div>
+    <div class="kpi-value">{{ counts.open_requests }}</div>
+    <div class="kpi-sub">Pending or partly allocated</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label"><i class="blue"></i>Demand covered</div>
+    <div class="kpi-value">{{ covered }}<small>%</small></div>
+    <div class="kpi-sub">{{ demand.allocated|num }} of {{ demand.requested|num }} units allocated</div>
+    {{ bar(demand.allocated, demand.requested, 'blue', covered ~ '% of requested units allocated') }}
+  </div>
+  <div class="kpi">
+    <div class="kpi-label"><i class="cyan"></i>In transit</div>
+    <div class="kpi-value">{{ counts.in_transit }}</div>
+    <div class="kpi-sub">Dispatched, awaiting delivery</div>
+  </div>
+</section>
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-7">
+    <section class="panel h-100">
+      <div class="panel-head">
+        <div><h2 class="panel-title">{{ icon('flame') }}Request queue</h2>
+          <p class="panel-sub">Highest priority first. This is the order allocation serves them in.</p></div>
+        <a class="btn btn-sm btn-ghost" href="{{ url_for('requests_list') }}">All requests {{ icon('arrow-right') }}</a>
+      </div>
+      <div class="table-wrap"><table class="table table-hover align-middle">
+        <thead><tr><th>Req</th><th>Zone</th><th>Urgency</th><th>Priority</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for r in critical %}
+          <tr><td class="id">#{{ r.request_id }}</td>
+            <td><span class="strong">{{ r.zone_name }}</span><span class="sub">{{ r.disaster_name }}</span></td>
+            <td>{{ urgency(r.urgency) }}</td>
+            <td><span class="score"><span class="num">{{ r.priority_score }}</span><span class="d-none d-xxl-block">{{ bar(r.priority_score, 100, 'blue') }}</span></span></td>
+            <td>{{ badge(r.status) }}</td></tr>
+        {% else %}<tr><td colspan="5" class="empty">No open requests.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <div class="col-xl-5">
+    <section class="panel h-100">
+      <div class="panel-head">
+        <div><h2 class="panel-title">{{ icon('alert') }}Active disasters</h2>
+          <p class="panel-sub">Open for relief requests.</p></div>
+        {% if has_role('ADMIN', 'COORDINATOR') %}<a class="btn btn-sm btn-ghost" href="{{ url_for('disasters') }}">Manage {{ icon('arrow-right') }}</a>{% endif %}
+      </div>
+      {% for d in active %}
+      <article class="incident">
+        <span class="tint tint-red">{{ dtype_icon(d.disaster_type) }}</span>
+        <div>
+          <div class="incident-name">{{ d.disaster_name }}</div>
+          <div class="incident-meta">{{ d.disaster_type|title }} &middot; since {{ d.start_date.strftime('%d %b %Y') }} &middot; day {{ (today - d.start_date).days + 1 }}</div>
+          <div class="incident-stats">
+            <div class="mini"><b>{{ d.people|num }}</b><span>People affected</span></div>
+            <div class="mini"><b>{{ d.zones }}</b><span>Zones</span></div>
+            <div class="mini"><b>{{ d.open_requests }}</b><span>Open requests</span></div>
+          </div>
+        </div>
+      </article>
+      {% else %}<div class="panel-body hint">No disaster is active.</div>{% endfor %}
+    </section>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-7">
+    <section class="panel h-100">
+      <div class="panel-head">
+        <div><h2 class="panel-title">{{ icon('trending-down') }}Unmet demand</h2>
+          <p class="panel-sub">How much of each requested item is allocated so far.</p></div>
+        <span class="count">{{ unmet|length }} item{{ 's' if unmet|length != 1 }}</span>
+      </div>
+      <ul class="barlist">
+        {% for r in unmet %}
+        <li><div class="top"><span class="name">{{ r.item_name }}<small>{{ r.allocated|num }} of {{ r.requested|num }} allocated</small></span>
+            <span class="fig"><b class="short">{{ r.unmet|num }}</b> short</span></div>
+          {{ bar(r.allocated, r.requested, 'blue', r.allocated|num ~ ' of ' ~ r.requested|num ~ ' allocated') }}</li>
+        {% else %}<li class="hint">All open demand is covered.</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+
+  <div class="col-xl-5">
+    <section class="panel h-100">
+      <div class="panel-head">
+        <div><h2 class="panel-title">{{ icon('box') }}Low stock</h2>
+          <p class="panel-sub">Stock in hand against the reorder level.</p></div>
+        <a class="btn btn-sm btn-ghost" href="{{ url_for('inventory') }}">{{ low|length }} of {{ counts.low_stock }} {{ icon('arrow-right') }}</a>
+      </div>
+      <ul class="barlist">
+        {% for r in low %}
+        <li><div class="top"><span class="name">{{ r.item_name }}<small>{{ r.warehouse_name }}</small></span>
+            <span class="fig"><b class="short">{{ r.quantity|num }}</b> of {{ r.reorder_level|num }}</span></div>
+          {{ bar(r.quantity, r.reorder_level, 'red', r.quantity|num ~ ' in stock, reorder at ' ~ r.reorder_level|num) }}</li>
+        {% else %}<li class="hint">No item is below its reorder level.</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+</div>
+{% endblock %}

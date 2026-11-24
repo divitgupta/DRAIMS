@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, choice, select, csrf, badge, dtype_icon, icon %}
+{% block title %}Disasters & Zones{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Operations</div>
+    <h1 class="page-title">Disasters &amp; affected zones</h1>
+    <p class="page-sub">Register a disaster, then add the zones it affects. Relief can only be requested for zones of active disasters.</p>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-5">
+    <section class="panel h-100">
+      <div class="panel-head"><div><h2 class="panel-title">{{ icon('alert') }}Register a disaster</h2>
+        <p class="panel-sub">Starts as active and open for requests.</p></div></div>
+      <div class="panel-body">
+        <form method="post" class="needs-validation" novalidate>
+          {{ csrf() }}<input type="hidden" name="form" value="disaster">
+          {{ field(dform, 'disaster_name', 'Disaster name', required=true, minlength=3, maxlength=100,
+                   placeholder='e.g. Kodagu Flash Floods', msg='3-100 characters.') }}
+          <div class="row g-3">
+            <div class="col-sm-6">{{ choice(dform, 'disaster_type', 'Type', types) }}</div>
+            <div class="col-sm-6">{{ field(dform, 'start_date', 'Start date', type='date', required=true,
+                                           msg='Choose a date that is not in the future.', max=today_iso()) }}</div>
+          </div>
+          <button class="btn btn-primary" type="submit">{{ icon('plus') }}Register disaster</button>
+        </form>
+      </div>
+    </section>
+  </div>
+  <div class="col-xl-7">
+    <section class="panel h-100">
+      <div class="panel-head"><div><h2 class="panel-title">{{ icon('map-pin') }}Add an affected zone</h2>
+        <p class="panel-sub">Damage level and population feed the allocation priority score.</p></div></div>
+      <div class="panel-body">
+        <form method="post" class="needs-validation" novalidate>
+          {{ csrf() }}<input type="hidden" name="form" value="zone">
+          {{ select(zform, 'disaster_id', 'Disaster (active only)', rows|selectattr('status', 'equalto', 'ACTIVE')|list,
+                    'disaster_id', 'disaster_name') }}
+          <div class="row g-3">
+            <div class="col-md-6">{{ field(zform, 'zone_name', 'Zone name', required=true, minlength=2, maxlength=80,
+                                           placeholder='e.g. Napoklu', msg='2-80 characters.') }}</div>
+            <div class="col-md-6">{{ field(zform, 'district', 'District', required=true, minlength=2, maxlength=50,
+                                           pattern="[A-Za-z][A-Za-z .'\\-]*", placeholder='e.g. Kodagu', msg='Letters and spaces only.') }}</div>
+            <div class="col-md-6">{{ field(zform, 'affected_population', 'Affected population', type='number', required=true,
+                                           min=0, max=10000000, step=1, msg='Whole number, 0 to 10,000,000.') }}</div>
+            <div class="col-md-6">{{ field(zform, 'damage_level', 'Damage level (1 = minor, 5 = severe)', type='number',
+                                           required=true, min=1, max=5, step=1, msg='Whole number from 1 to 5.') }}</div>
+          </div>
+          <button class="btn btn-primary" type="submit">{{ icon('plus') }}Add zone</button>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head"><div><h2 class="panel-title">{{ icon('list') }}All disasters</h2>
+    <p class="panel-sub">Closing a disaster stops new requests for its zones.</p></div><span class="count">{{ rows|length }}</span></div>
+  <div class="table-wrap"><table class="table table-hover align-middle">
+    <thead><tr><th>Disaster</th><th>Type</th><th>Started</th><th class="text-end">Zones</th><th class="text-end">People affected</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for d in rows %}
+      <tr><td><span class="d-inline-flex align-items-center gap-2"><span class="tint tint-{{ 'red' if d.status == 'ACTIVE' else 'blue' }} dtype">{{ dtype_icon(d.disaster_type) }}</span><span class="strong">{{ d.disaster_name }}</span></span></td>
+        <td>{{ d.disaster_type|title }}</td><td class="num">{{ d.start_date.strftime('%d %b %Y') }}</td>
+        <td class="text-end num">{{ d.zones }}</td><td class="text-end num">{{ d.people|num }}</td><td>{{ badge(d.status) }}</td>
+        <td class="text-end">{% if d.status == 'ACTIVE' %}
+          <form method="post" action="{{ url_for('close_disaster', disaster_id=d.disaster_id) }}"
+                data-confirm="Close this disaster? No new requests will be accepted for it.">
+            {{ csrf() }}<button class="btn btn-sm btn-ghost" type="submit">Close</button></form>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

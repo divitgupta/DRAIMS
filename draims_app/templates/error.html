@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Error {{ code }}{% endblock %}
+{% block content %}
+{% set text = {400: ('Request rejected', 'The form could not be accepted. It may have expired; go back, reload the page and try again.'),
+               403: ('Access denied', 'Your role is not allowed to open this page.'),
+               404: ('Page not found', 'The page you asked for does not exist.'),
+               413: ('Too much data', 'The form sent more data than allowed.'),
+               500: ('Something went wrong', 'The server could not finish the request. Nothing was changed.'),
+               503: ('Database not reachable', 'The app could not connect to MySQL. Check that the MySQL server is running and the draims database is loaded, then try again.')} %}
+<div class="error-page">
+  <div>
+    <div class="error-num" aria-hidden="true">{{ code }}</div>
+    <h1><span class="visually-hidden">Error {{ code }}: </span>{{ text.get(code, text[500])[0] }}</h1>
+    <p>{{ text.get(code, text[500])[1] }}</p>
+    {% if code == 503 %}
+    <a class="btn btn-primary" href="{{ request.path if request.method == 'GET' else url_for('login') }}">{{ icon('play') }}Try again</a>
+    {% else %}
+    <a class="btn btn-primary" href="{{ url_for('dashboard') }}">{{ icon('arrow-left') }}Back to dashboard</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

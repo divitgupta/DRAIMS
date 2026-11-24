@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "_macros.html" import select, csrf, icon %}
+{% block title %}New relief request{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Operations</div>
+    <h1 class="page-title">New relief request</h1>
+    <p class="page-sub">Ask for supplies for one zone. The request joins the queue and is served by priority when allocation runs.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <form method="post" class="needs-validation" novalidate id="request-form">
+      {{ csrf() }}
+      <section class="panel">
+        <div class="panel-body">
+          <div class="section-label"><span class="step">1</span>Where and how urgent</div>
+          {{ select(form, 'zone_id', 'Affected zone', zones, 'zone_id', 'zone_name', sub='disaster_name',
+                    msg='Choose the zone that needs relief.') }}
+          {% set err = form.errors.get('urgency') %}
+          <label class="form-label d-block">Urgency</label>
+          <div class="urgency-group" role="group" aria-label="Urgency">
+            {% for n, t in [(1,'Low'),(2,'Moderate'),(3,'High'),(4,'Very high'),(5,'Critical')] %}
+            <input type="radio" class="btn-check" name="urgency" id="u{{ n }}" value="{{ n }}" required
+                   {% if form.data.get('urgency') == n|string %}checked{% endif %}>
+            <label class="btn urg-btn urg-btn-{{ n }}" for="u{{ n }}"><span class="n">{{ n }}</span><span class="t">{{ t }}</span></label>
+            {% endfor %}
+          </div>
+          <div class="invalid-feedback {% if err %}d-block{% endif %}">{{ err or 'Choose an urgency level.' }}</div>
+        </div>
+
+        <div class="panel-body border-top">
+          <div class="section-label"><span class="step">2</span>Items needed</div>
+          {% if item_errors %}<div class="alert alert-danger">{{ icon('alert-circle') }}<div>{% for e in item_errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+          <div class="alert alert-danger d-none" id="dup-error">{{ icon('alert-circle') }}<div>The same item is listed twice. Combine the quantities into one row.</div></div>
+          <div class="table-wrap"><table class="table items-table align-middle mb-2" id="item-table">
+            <thead><tr><th>Item</th><th class="w-qty">Quantity</th><th class="w-btn"></th></tr></thead>
+            <tbody>
+            {% for it, q in submitted %}
+              <tr class="item-row">
+                <td><select class="form-select" name="item_id" required>
+                    <option value="">Choose&hellip;</option>
+                    {% for i in items %}<option value="{{ i.item_id }}" {% if it == i.item_id|string %}selected{% endif %}>{{ i.item_name }} ({{ i.unit }})</option>{% endfor %}
+                  </select><div class="invalid-feedback">Choose an item.</div></td>
+                <td><input class="form-control" name="qty" type="number" min="1" max="100000" step="1" required value="{{ q }}" placeholder="0">
+                  <div class="invalid-feedback">1 to 100,000.</div></td>
+                <td class="text-end"><button type="button" class="icon-btn danger remove-row" aria-label="Remove item" title="Remove item">{{ icon('x') }}</button></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table></div>
+          <button type="button" class="btn btn-sm btn-ghost" id="add-row">{{ icon('plus') }}Add item</button>
+        </div>
+
+        <div class="panel-foot">
+          <button class="btn btn-primary" type="submit">{{ icon('check') }}Submit request</button>
+          <span class="hint">Up to 15 items. Requests are accepted only for zones of active disasters.</span>
+        </div>
+      </section>
+    </form>
+  </div>
+
+  <aside class="col-xl-4">
+    <section class="panel">
+      <div class="panel-head"><h2 class="panel-title">{{ icon('list') }}What happens next</h2></div>
+      <div class="panel-body">
+        <ol class="steps">
+          <li><div><b>The request joins the queue</b>Its priority score comes from the zone's damage level and population, this urgency, and how long it has waited.</div></li>
+          <li><div><b>The coordinator runs allocation</b>Stock is reserved for the highest scores first, from the nearest warehouse that has it.</div></li>
+          <li><div><b>The warehouse dispatches</b>The warehouse manager marks the stock as dispatched when it leaves.</div></li>
+          <li><div><b>Delivery is confirmed</b>The field officer confirms once the supplies reach the zone.</div></li>
+        </ol>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

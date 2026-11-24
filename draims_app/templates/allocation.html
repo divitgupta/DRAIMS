@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, bar, csrf, icon, urgency %}
+{% block title %}Allocation{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Operations</div>
+    <h1 class="page-title">Priority-based allocation</h1>
+    <p class="page-sub">One run serves every waiting request, highest score first. Stock comes from a warehouse in the
+      same district if it has any, then from the warehouse with the most stock.</p>
+  </div>
+  <form method="post" action="{{ url_for('run_allocation') }}"
+        data-confirm="Allocate stock to all open requests now, highest priority first?">
+    {{ csrf() }}<button class="btn btn-primary" type="submit" {% if not pending %}disabled{% endif %}>{{ icon('play') }}Run allocation</button>
+  </form>
+</div>
+
+<section class="panel mb-4">
+  <div class="panel-head">
+    <div><h2 class="panel-title">{{ icon('sliders') }}How the priority score is built</h2>
+      <p class="panel-sub">A score from 0 to 100, recalculated every time the queue is read.</p></div>
+  </div>
+  <div class="panel-body">
+    <div class="weights-bar" aria-hidden="true"><i class="w35"></i><i class="w30"></i><i class="w20"></i><i class="w15"></i></div>
+    <div class="weights-legend">
+      <div><b>35%</b><span>Damage level of the zone</span></div>
+      <div><b>30%</b><span>Urgency of the request</span></div>
+      <div><b>20%</b><span>People affected</span></div>
+      <div><b>15%</b><span>Waiting time</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel mb-4">
+  <div class="panel-head"><div><h2 class="panel-title">{{ icon('clock') }}Waiting requests</h2>
+    <p class="panel-sub">Served from the top down.</p></div><span class="count">{{ pending|length }}</span></div>
+  <div class="table-wrap"><table class="table table-hover align-middle">
+    <thead><tr><th>Rank</th><th>Req</th><th>Zone</th><th>Urgency</th><th>Priority</th><th>Covered so far</th><th>Status</th></tr></thead>
+    <tbody>{% for r in pending %}<tr><td class="rank">{{ '%02d'|format(loop.index) }}</td><td class="id">#{{ r.request_id }}</td>
+      <td><span class="strong">{{ r.zone_name }}</span><span class="sub">{{ r.disaster_name }}</span></td>
+      <td>{{ urgency(r.urgency) }}</td>
+      <td><span class="score"><span class="num">{{ r.priority_score }}</span>{{ bar(r.priority_score, 100, 'blue') }}</span></td>
+      <td><span class="meter">{{ bar(r.allocated, r.requested, 'green') }}<span class="num">{{ r.allocated|num }} <span class="unit">of {{ r.requested|num }}</span></span></span></td>
+      <td>{{ badge(r.status) }}</td></tr>
+    {% else %}<tr><td colspan="7" class="empty">No requests are waiting.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+<div class="row g-4 align-items-start">
+  <div class="col-xl-5">
+    <section class="panel">
+      <div class="panel-head"><div><h2 class="panel-title">{{ icon('trending-down') }}Unmet demand</h2>
+        <p class="panel-sub">Not covered by any warehouse yet.</p></div><span class="count">{{ unmet|length }}</span></div>
+      <ul class="barlist">
+        {% for u in unmet %}
+        <li><div class="top"><span class="name">{{ u.item_name }}</span>
+            <span class="fig"><b class="short">{{ u.unmet|num }}</b> short of {{ u.requested|num }} requested</span></div>
+          {{ bar(u.allocated, u.requested, 'blue', u.allocated|num ~ ' of ' ~ u.requested|num ~ ' allocated') }}</li>
+        {% else %}<li class="hint">None. Every open request is fully covered.</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+  <div class="col-xl-7">
+    <section class="panel">
+      <div class="panel-head"><div><h2 class="panel-title">{{ icon('target') }}Latest allocations</h2>
+        <p class="panel-sub">Each line reserves stock at one warehouse.</p></div><span class="count">{{ recent|length }}</span></div>
+      <div class="table-wrap"><table class="table table-hover align-middle">
+        <thead><tr><th>Req</th><th>Zone</th><th>Item</th><th class="text-end">Qty</th><th>Status</th></tr></thead>
+        <tbody>{% for a in recent %}<tr><td class="id">#{{ a.request_id }}</td><td class="strong">{{ a.zone_name }}</td>
+          <td>{{ a.item_name }}<span class="sub">from {{ a.warehouse_name }}</span></td>
+          <td class="text-end num">{{ a.quantity|num }}</td><td>{{ badge(a.status) }}</td></tr>
+        {% else %}<tr><td colspan="5" class="empty">No allocations yet.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}DRAIMS{% endblock %} &middot; DRAIMS</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+</head>
+<body>
+{% from "_macros.html" import icon, initials, flash_list %}
+{% if g.user %}
+{# menu: (endpoint, label, icon, shown for this role) #}
+{% set nav = [
+  ('Overview', [('dashboard', 'Dashboard', 'grid', True)]),
+  ('Operations', [('disasters', 'Disasters & Zones', 'alert', has_role('ADMIN', 'COORDINATOR')),
+                  ('new_request', 'New Request', 'plus', has_role('COORDINATOR', 'FIELD_OFFICER')),
+                  ('requests_list', 'Requests', 'list', True),
+                  ('allocation', 'Allocation', 'target', has_role('COORDINATOR')),
+                  ('dispatch', 'Dispatch & Delivery', 'truck', has_role('COORDINATOR', 'WAREHOUSE_MANAGER', 'FIELD_OFFICER'))]),
+  ('Stock', [('donations', 'Donations', 'heart', has_role('ADMIN', 'WAREHOUSE_MANAGER')),
+             ('inventory', 'Inventory', 'box', True)]),
+  ('Administration', [('users', 'Users', 'users', has_role('ADMIN'))]),
+] %}
+<div class="shell">
+<aside class="sidebar offcanvas-lg offcanvas-start" id="sidebar" tabindex="-1" aria-label="Main menu">
+  <div class="sidebar-inner">
+    <a class="brand" href="{{ url_for('dashboard') }}">
+      <span class="brand-mark">{{ icon('buoy') }}</span>
+      <span><span class="brand-name">DRAIMS</span><span class="brand-sub">Disaster relief console</span></span>
+    </a>
+    <nav class="side-nav">
+      {% for group, links in nav %}
+        {% set shown = links|selectattr('3')|list %}
+        {% if shown %}
+        <div class="nav-label">{{ group }}</div>
+        {% for ep, label, ic, ok in shown %}
+        <a class="side-link{% if request.endpoint == ep %} active{% endif %}" href="{{ url_for(ep) }}"
+           {% if request.endpoint == ep %}aria-current="page"{% endif %}>{{ icon(ic) }}<span>{{ label }}</span></a>
+        {% endfor %}
+        {% endif %}
+      {% endfor %}
+    </nav>
+    <div class="side-user">
+      <span class="avatar">{{ initials(g.user.full_name) }}</span>
+      <span class="who"><b>{{ g.user.full_name }}</b><span>{{ ROLE_NAMES[g.user.role] }}</span></span>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="icon-btn" type="submit" title="Log out" aria-label="Log out">{{ icon('logout') }}</button>
+      </form>
+    </div>
+  </div>
+</aside>
+<div class="main">
+  <header class="topbar">
+    <button class="icon-btn d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar"
+            aria-controls="sidebar" aria-label="Open menu">{{ icon('menu') }}</button>
+    <div class="crumb"><span class="d-none d-sm-inline">DRAIMS &nbsp;/&nbsp; </span><b>{{ self.title() }}</b></div>
+    <div class="spacer"></div>
+    <span class="date d-none d-sm-inline">{{ today_text() }}</span>
+    <span class="status-pill d-none d-md-inline-flex"><span class="dot"></span>Offline mode &middot; local network</span>
+  </header>
+  <main class="content">
+{% else %}
+<main class="bare">
+{% endif %}
+    {% block flashes %}{{ flash_list() }}{% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+{% if g.user %}
+  <footer class="app-footer">DRAIMS &middot; offline mode: local network only, no internet or cloud services &middot; Dept. of CSE, RVCE</footer>
+</div>
+</div>
+{% endif %}
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

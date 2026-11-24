@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, bar, field, csrf, icon %}
+{% block title %}Inventory{% endblock %}
+{% block content %}
+{% set low_count = rows|selectattr('stock_status', 'equalto', 'REORDER')|list|length %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Stock</div>
+    <h1 class="page-title">Inventory</h1>
+    <p class="page-sub">Stock held at each warehouse. Items below their reorder level are flagged for restocking.</p>
+  </div>
+  {% if has_role('ADMIN', 'WAREHOUSE_MANAGER') %}
+  <div class="page-actions"><a class="btn btn-primary" href="{{ url_for('donations') }}">{{ icon('heart') }}Record donation</a></div>
+  {% endif %}
+</div>
+
+<section class="panel kpis three mb-4" aria-label="Key figures">
+  <div class="kpi"><div class="kpi-label"><i class="blue"></i>Warehouses</div>
+    <div class="kpi-value">{{ rows|map(attribute='warehouse_id')|unique|list|length }}</div><div class="kpi-sub">Holding relief stock</div></div>
+  <div class="kpi"><div class="kpi-label"><i class="cyan"></i>Stock lines</div>
+    <div class="kpi-value">{{ rows|length }}</div><div class="kpi-sub">Item and warehouse pairs</div></div>
+  <div class="kpi"><div class="kpi-label"><i class="{{ 'red' if low_count else 'green' }}"></i>Below reorder level</div>
+    <div class="kpi-value">{{ low_count }}</div><div class="kpi-sub">{{ 'Need restocking' if low_count else 'Everything is stocked' }}</div></div>
+</section>
+
+{% if has_role('ADMIN', 'WAREHOUSE_MANAGER') %}
+<section class="panel mb-4">
+  <div class="panel-head"><div><h2 class="panel-title">{{ icon('sliders') }}Change a reorder level</h2>
+    <p class="panel-sub">An item is flagged when its stock falls below this level.</p></div></div>
+  <div class="panel-body pb-1">
+    <form method="post" class="row g-3 align-items-start needs-validation" novalidate>
+      {{ csrf() }}
+      <div class="col-md-6">
+        {% set err = form.errors.get('pair') %}
+        <label class="form-label" for="f-pair">Warehouse and item</label>
+        <select class="form-select{% if err %} is-invalid{% endif %}" id="f-pair" name="pair" required>
+          <option value="">Choose&hellip;</option>
+          {% for r in rows %}<option value="{{ r.warehouse_id }}-{{ r.item_id }}">{{ r.warehouse_name }} &ndash; {{ r.item_name }}</option>{% endfor %}
+        </select><div class="invalid-feedback">{{ err or 'Choose a stock item.' }}</div>
+      </div>
+      <div class="col-sm-6 col-md-3">{{ field(form, 'reorder_level', 'New reorder level', type='number', required=true, min=0,
+                                     max=1000000, step=1, msg='0 to 1,000,000.') }}</div>
+      <div class="col-sm-6 col-md-3"><label class="form-label d-none d-sm-block">&nbsp;</label>
+        <button class="btn btn-ghost w-100" type="submit">{{ icon('check') }}Save</button></div>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head"><div><h2 class="panel-title">{{ icon('box') }}Stock by warehouse</h2>
+    <p class="panel-sub">The bar is full when stock is at twice the reorder level or more.</p></div><span class="count">{{ rows|length }}</span></div>
+  <div class="table-wrap"><table class="table table-hover align-middle">
+    <thead><tr><th>Item</th><th class="text-end">In stock</th><th>Level</th><th class="text-end">Reorder at</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for wh in rows|groupby('warehouse_name') %}
+      {% set lows = wh.list|selectattr('stock_status', 'equalto', 'REORDER')|list|length %}
+      <tr class="group"><th colspan="5" scope="colgroup">{{ wh.grouper }}<small>{{ wh.list[0].district }} district</small>
+        <span class="count">{{ wh.list|length }} items{% if lows %}, {{ lows }} low{% endif %}</span></th></tr>
+      {% for r in wh.list %}
+      <tr><td class="strong">{{ r.item_name }}</td>
+        <td class="text-end num{% if r.stock_status == 'REORDER' %} danger-num{% endif %}">{{ r.quantity|num }} <span class="unit">{{ r.unit }}</span></td>
+        <td><span class="meter">{{ bar(r.quantity, [r.reorder_level * 2, 1]|max, 'red' if r.stock_status == 'REORDER' else 'green',
+                                      r.quantity|num ~ ' in stock, reorder at ' ~ r.reorder_level|num) }}</span></td>
+        <td class="text-end num">{{ r.reorder_level|num }}</td><td>{{ badge(r.stock_status) }}</td></tr>
+      {% endfor %}
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}
